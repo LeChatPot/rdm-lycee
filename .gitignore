@@ -1,0 +1,14 @@
+# Dépendances et fichiers générés
+node_modules/
+dist/
+# Captures et fichiers produits par les tests d'interface (régénérables)
+docs/captures/*.pdf
+docs/captures/*.json
+# Système / éditeurs
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
+__pycache__/

@@ -1,0 +1,16 @@
+{
+  "name": "rdm-lycee",
+  "version": "1.0.0",
+  "description": "Logiciel pédagogique de résistance des matériaux (poutres en flexion) pour la Terminale STI2D AC — page web autonome, hors ligne.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "Quentin Amiot",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test:interface": "npm run build && python3 tests/interface/interactions.py",
+    "dev": "npm run build && node scripts/serveur.mjs"
+  }
+}

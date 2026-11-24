@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RDM Lycée — Poutre en flexion (v1)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Poutre — calcul de flexion</h1>
+    <div class="sous">Version 1 · Terminale STI2D Architecture et Construction · inspiré de RDM 7 – Flexion (IUT du Mans)</div>
+  </div>
+  <div class="barre">
+    <button id="bNouveau" title="Nouvelle étude (poutre sur deux appuis)">Nouvelle étude</button>
+    <select id="selCasType" title="Charger un cas type">
+      <option value="">Cas types…</option>
+      <option value="solive">Solive bois sur 2 appuis</option>
+      <option value="console">Console de balcon</option>
+      <option value="continue">Poutre continue sur 3 appuis</option>
+    </select>
+    <button id="bOuvrir">Ouvrir…</button>
+    <button id="bEnregistrer">Enregistrer</button>
+    <span class="sep"></span>
+    <button id="bAnnuler" title="Annuler (Ctrl+Z)">Annuler</button>
+    <button id="bRetablir" title="Rétablir (Ctrl+Y)">Rétablir</button>
+    <span class="sep"></span>
+    <button id="bImprimer" class="principal">Imprimer le compte rendu</button>
+    <input type="file" id="fichierOuvrir" accept=".json,application/json" class="cache">
+  </div>
+</header>
+
+<main>
+<aside>
+  <section>
+    <h2>1. Étude</h2>
+    <div class="ligne"><label for="iTitre">Titre</label><input type="text" id="iTitre" style="width:220px"></div>
+    <div class="ligne"><label for="iAuteur">Élève / classe</label><input type="text" id="iAuteur" style="width:220px"></div>
+  </section>
+
+  <section>
+    <h2>2. Poutre et matériau</h2>
+    <div class="ligne"><label for="iL">Longueur L</label><input type="text" id="iL" inputmode="decimal"><span class="unite">m</span></div>
+    <div class="ligne"><label for="selMat">Matériau</label><select id="selMat"></select></div>
+    <div class="ligne"><label for="iE">Module d'Young E</label><input type="text" id="iE" inputmode="decimal"><span class="unite">MPa</span></div>
+    <div class="ligne"><label for="iRho">Masse volumique ρ</label><input type="text" id="iRho" inputmode="decimal"><span class="unite">kg/m³</span></div>
+    <div class="ligne"><label for="iFk" id="lFk">Résistance fk</label><input type="text" id="iFk" inputmode="decimal"><span class="unite">MPa</span></div>
+    <div class="ligne"><label for="iKmod">kmod / γM</label><input type="text" id="iKmod" inputmode="decimal" style="width:48px"><span class="unite">/</span><input type="text" id="iGam" inputmode="decimal" style="width:48px"></div>
+    <p class="note" id="noteMat"></p>
+  </section>
+
+  <section>
+    <h2>3. Section droite</h2>
+    <div class="ligne"><label for="selSec">Forme</label>
+      <select id="selSec">
+        <option value="rect">Rectangle plein (bois, panneau)</option>
+        <option value="rond">Rond plein</option>
+        <option value="rond_creux">Rond creux (tube)</option>
+        <option value="rect_creux">Rectangle creux (tube)</option>
+        <option value="IPE">Profilé IPE</option>
+        <option value="HEA">Profilé HEA</option>
+        <option value="quelconque">Quelconque (A, Iz, v)</option>
+      </select></div>
+    <div id="champsSec"></div>
+    <div class="deux" style="grid-template-columns:1fr 120px;align-items:center">
+      <table class="carac"><tbody id="caracSec"></tbody></table>
+      <svg id="svgSec" viewBox="0 0 120 120" style="border:1px solid var(--trait)"></svg>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Appuis et liaisons</h2>
+    <div class="ligne">
+      <select id="aType">
+        <option value="appui">Appui simple (v = 0)</option>
+        <option value="encastrement">Encastrement (v = 0, θ = 0)</option>
+        <option value="rotule">Rotule intérieure</option>
+        <option value="pente_nulle">Pente nulle (θ = 0)</option>
+        <option value="deplacement">Déplacement imposé</option>
+        <option value="ressort_v">Appui élastique (translation)</option>
+        <option value="ressort_r">Appui élastique (rotation)</option>
+      </select>
+    </div>
+    <div class="ligne"><label for="aX">Abscisse x</label><input type="text" id="aX" inputmode="decimal" value="0"><span class="unite">m</span></div>
+    <div class="ligne" id="aValLigne"><label for="aVal" id="aValLab">Valeur</label><input type="text" id="aVal" inputmode="decimal" value="0"><span class="unite" id="aValU"></span></div>
+    <div class="ligne"><button id="bAjAppui" class="principal">Ajouter l'appui</button></div>
+    <table class="tab-saisie"><thead><tr><th>Type</th><th>x (m)</th><th>Valeur</th><th></th></tr></thead><tbody id="tAppuis"></tbody></table>
+    <p class="note" id="noteHyper"></p>
+  </section>
+
+  <section>
+    <h2>5. Charges</h2>
+    <div class="ligne">
+      <select id="cType">
+        <option value="force">Force ponctuelle</option>
+        <option value="uniforme">Répartie uniforme</option>
+        <option value="lineaire">Répartie linéaire (trapèze)</option>
+        <option value="couple">Couple ponctuel</option>
+      </select>
+      <select id="cCat" title="Catégorie de charge">
+        <option value="G">G — permanente</option>
+        <option value="Q">Q — exploitation</option>
+        <option value="">non classée</option>
+      </select>
+    </div>
+    <div class="ligne" id="cLX"><label for="cX">Abscisse x</label><input type="text" id="cX" inputmode="decimal" value="0"><span class="unite">m</span></div>
+    <div class="ligne cache" id="cLX12"><label for="cX1">De x1 à x2</label><input type="text" id="cX1" inputmode="decimal" value="0"><input type="text" id="cX2" inputmode="decimal" value="0"><span class="unite">m</span></div>
+    <div class="ligne"><label for="cV1" id="cV1Lab">Intensité</label><input type="text" id="cV1" inputmode="decimal" value="-1"><span class="unite" id="cV1U">kN</span></div>
+    <div class="ligne cache" id="cLV2"><label for="cV2">Intensité en x2</label><input type="text" id="cV2" inputmode="decimal" value="-1"><span class="unite">kN/m</span></div>
+    <p class="note">Signe : valeur négative = charge vers le bas ; couple positif = sens trigonométrique.</p>
+    <div class="ligne"><button id="bAjCharge" class="principal">Ajouter la charge</button></div>
+    <table class="tab-saisie"><thead><tr><th>Type</th><th>Cat.</th><th>Position (m)</th><th>Valeur</th><th></th></tr></thead><tbody id="tCharges"></tbody></table>
+    <div class="ligne" style="margin-top:8px"><label for="cPP" style="min-width:0"><input type="checkbox" id="cPP"> Poids propre de la poutre (G)</label><span class="unite" id="ppVal"></span></div>
+    <div class="ligne"><label for="iG">Pesanteur g</label><input type="text" id="iG" inputmode="decimal" style="width:50px"><span class="unite">m/s²</span></div>
+  </section>
+
+  <section>
+    <h2>6. Vérifications</h2>
+    <div class="ligne"><label for="selFleche">Flèche admissible</label>
+      <select id="selFleche">
+        <option value="200">ℓ / 200</option>
+        <option value="300">ℓ / 300</option>
+        <option value="500">ℓ / 500</option>
+      </select></div>
+    <p class="note">ℓ = portée entre deux appuis ; pour une console, ℓ = 2 × longueur du porte-à-faux.
+      Flèche vérifiée sous G + Q (ELS), contrainte sous 1,35 G + 1,5 Q (ELU).</p>
+  </section>
+</aside>
+
+<div>
+  <div class="bloc">
+    <div class="diag-titre"><h2 style="margin:0">Schéma de la poutre</h2>
+      <span class="note">Les nœuds de calcul sont créés automatiquement aux appuis et aux charges.</span></div>
+    <div class="ligne" style="margin-top:8px">
+      <span class="unite">Placer à la souris :</span>
+      <button class="outil" data-outil="appui">Appui simple</button>
+      <button class="outil" data-outil="encastrement">Encastrement</button>
+      <button class="outil" data-outil="rotule">Rotule</button>
+      <button class="outil" data-outil="force">Force</button>
+      <button class="outil" data-outil="repartie">Charge répartie</button>
+      <span class="sep"></span>
+      <label class="unite" for="oVal">Valeur</label><input type="text" id="oVal" inputmode="decimal" value="-5" style="width:52px"><span class="unite">kN ou kN/m</span>
+      <select id="oCat"><option value="G">G</option><option value="Q" selected>Q</option></select>
+      <label class="unite" for="oPas">Pas</label>
+      <select id="oPas"><option value="0.01">0,01 m</option><option value="0.05" selected>0,05 m</option><option value="0.1">0,10 m</option><option value="0.25">0,25 m</option></select>
+      <label class="unite"><input type="checkbox" id="oGarder"> garder l'outil</label>
+    </div>
+    <div id="etatOutil">Aucun outil actif. Choisis un outil ci-dessus ou utilise les formulaires à gauche.</div>
+    <svg id="svgSchema" viewBox="0 0 1000 290"></svg>
+    <div id="messages"></div>
+  </div>
+
+  <div class="bloc">
+    <div class="diag-titre">
+      <h2 style="margin:0">Résultats</h2>
+      <div class="ligne" style="margin:0">
+        <label class="unite" for="selCas">Cas affiché</label>
+        <select id="selCas"><option value="ELU">ELU : 1,35 G + 1,5 Q</option><option value="ELS">ELS : G + Q</option></select>
+        <label style="margin-left:10px"><input type="checkbox" id="cJeCalcule"> Je calcule d'abord</label>
+      </div>
+    </div>
+
+    <div id="zoneJeCalcule" class="cache">
+      <div class="message info">Mode « Je calcule d'abord » : fais ton calcul à la main, saisis tes résultats ci-dessous (cas affiché : <span id="jcCas"></span>), puis compare avec la solution.</div>
+      <table><thead><tr><th>Grandeur</th><th class="num">Ma valeur</th><th class="num">Solution</th><th class="num">Écart</th></tr></thead><tbody id="tJeCalcule"></tbody></table>
+      <div class="ligne" style="margin-top:8px"><button id="bComparer" class="principal">Comparer et afficher la solution</button><button id="bMasquer">Masquer la solution</button></div>
+    </div>
+
+    <div id="zoneResultats">
+      <div class="deux">
+        <div>
+          <h3>Actions de liaison (réactions)</h3>
+          <table><thead><tr><th>Appui</th><th class="num">x (m)</th><th class="num">Fy (kN)</th><th class="num">Mz (kN·m)</th></tr></thead><tbody id="tReactions"></tbody></table>
+          <h3>Équilibre de la poutre (vérification)</h3>
+          <div id="equilibre"></div>
+        </div>
+        <div>
+          <h3>Valeurs extrêmes</h3>
+          <table><tbody id="tExtrema"></tbody></table>
+        </div>
+      </div>
+
+      <div class="ligne" style="margin-top:10px"><span class="unite">Valeur en un point :</span> x = <input type="text" id="iXlec" inputmode="decimal" style="width:60px"> m <button id="bXlec" class="petit">Lire</button>
+        <span class="note">ou survole un diagramme.</span></div>
+      <div id="lecture">&nbsp;</div>
+
+      <div class="diag-titre"><h3>Effort tranchant Ty (kN)</h3></div>
+      <svg id="dT" class="diag" viewBox="0 0 1000 190"></svg>
+      <div class="diag-titre"><h3>Moment fléchissant Mfz (kN·m)</h3><span class="note">Mf &gt; 0 : fibre inférieure tendue</span></div>
+      <svg id="dM" class="diag" viewBox="0 0 1000 190"></svg>
+      <div class="diag-titre"><h3>Déformée v (mm)</h3>
+        <div class="ligne" style="margin:0"><label class="unite" for="rAmp">Amplification</label><input type="range" id="rAmp" min="0" max="100" value="50" style="width:140px"><span class="unite" id="ampVal"></span><button id="bAnimer" class="petit">Animer la mise en charge</button></div></div>
+      <svg id="dV" class="diag" viewBox="0 0 1000 210"></svg>
+      <details><summary>Pente θz et contraintes normales σ (fibres supérieure et inférieure)</summary>
+        <div class="diag-titre"><h3>Pente θz (°)</h3></div>
+        <svg id="dTh" class="diag" viewBox="0 0 1000 170"></svg>
+        <div class="diag-titre"><h3>Contraintes normales σ (MPa) : fibre supérieure (trait plein), fibre inférieure (tirets)</h3></div>
+        <svg id="dS" class="diag" viewBox="0 0 1000 190"></svg>
+        <p class="note">σxx = −y · Mfz / Iz (y vers le haut). σ &gt; 0 : traction ; σ &lt; 0 : compression.</p>
+      </details>
+    </div>
+  </div>
+
+  <div class="bloc">
+    <h2>Vérifications</h2>
+    <div id="verifs"></div>
+  </div>
+
+  <div class="bloc note">
+    Hypothèses : poutre droite, matériau élastique linéaire homogène, petits déplacements, sections planes (Bernoulli, effort tranchant non pris en compte dans la flèche).
+    Calcul par la méthode des déplacements (éléments finis poutre, valeurs exactes aux nœuds).
+    Les vérifications sont <b>pédagogiques</b> : elles ne remplacent pas une note de calcul réglementaire (fluage du bois, déversement, cisaillement, appuis, flambement… non traités).
+  </div>
+</div>
+</main>
+
+<div id="rapport"></div>
+
+<script id="moteur" src="moteur.bundle.js"></script>
+
+<script id="interface" src="app.js"></script>
+</body>
+</html>

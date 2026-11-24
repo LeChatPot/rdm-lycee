@@ -1,0 +1,51 @@
+# Construction, tests puis publication sur GitHub Pages à chaque envoi sur main.
+# Si un test échoue, rien n'est publié : la version en ligne reste la précédente.
+name: Publier sur GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # lancement manuel possible depuis l'onglet Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construire:
+    name: Tests et construction
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+      - name: Installer Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Tests du moteur (8 exemples du manuel RDM – Flexion, tolérance 0,1 %)
+        run: npm test
+      - name: Construire dist/index.html
+        run: npm run build
+      - name: Configurer GitHub Pages
+        uses: actions/configure-pages@v6
+      - name: Préparer le site (dossier dist/)
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  publier:
+    name: Publication
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Déployer sur GitHub Pages
+        id: deploiement
+        uses: actions/deploy-pages@v5
